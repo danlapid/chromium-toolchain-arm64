@@ -90,8 +90,12 @@ jobs:
     
     - name: Build toolchain
       run: |
+        # Completely remove cmake from all common system paths
+        sudo rm -f /usr/bin/cmake /usr/local/bin/cmake /opt/cmake/bin/cmake
+        export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v -E "(cmake|/usr/local/bin)" | tr '\n' ':' | sed 's/:$//')
+        
         # Clear any CMAKE environment variables that might interfere with Chromium's build.py
-        unset CMAKE_ROOT CMAKE_MODULE_PATH CMAKE_PREFIX_PATH CMAKE_PROGRAM_PATH
+        unset CMAKE_ROOT CMAKE_MODULE_PATH CMAKE_PREFIX_PATH CMAKE_PROGRAM_PATH CMAKE_INSTALL_PREFIX
         
         # Ensure Chromium's build.py can set up its own environment
         chmod +x scripts/build-toolchain.sh
