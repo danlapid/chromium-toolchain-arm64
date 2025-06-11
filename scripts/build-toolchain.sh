@@ -99,8 +99,41 @@ prepare_llvm_source() {
     
     # Checkout specific revision
     log "Checking out LLVM revision $LLVM_REVISION..."
-    git fetch --depth 1 origin "$LLVM_REVISION"
-    git checkout "$LLVM_REVISION"
+    
+    # Try to fetch the revision/tag
+    if [[ "$LLVM_REVISION" =~ ^llvmorg- ]]; then
+        # It's a tag, fetch all tags
+        log "Detected LLVM tag format, fetching tags..."
+        git fetch --tags origin
+        git checkout "$LLVM_REVISION"
+    elif [[ ${#LLVM_REVISION} -le 12 ]]; then
+        # It's a short hash, we need to fetch more to resolve it
+        log "Short hash detected, fetching more commits to resolve full hash..."
+        git fetch --unshallow origin main || git fetch --depth 10000 origin main
+        
+        # Find the full hash
+        FULL_HASH=$(git rev-parse --verify "${LLVM_REVISION}^{commit}" 2>/dev/null || echo "")
+        if [[ -n "$FULL_HASH" ]]; then
+            log "Resolved short hash $LLVM_REVISION to full hash: $FULL_HASH"
+            LLVM_REVISION="$FULL_HASH"
+            git checkout "$LLVM_REVISION"
+        else
+            log "Could not resolve short hash, trying to fetch all commits..."
+            git fetch --unshallow origin || true
+            FULL_HASH=$(git rev-parse --verify "${LLVM_REVISION}^{commit}" 2>/dev/null || echo "")
+            if [[ -n "$FULL_HASH" ]]; then
+                log "Resolved short hash $LLVM_REVISION to full hash: $FULL_HASH"
+                LLVM_REVISION="$FULL_HASH"
+                git checkout "$LLVM_REVISION"
+            else
+                error "Could not resolve LLVM revision: $LLVM_REVISION"
+            fi
+        fi
+    else
+        # It's likely a full hash
+        git fetch --depth 1 origin "$LLVM_REVISION" || git fetch --unshallow origin
+        git checkout "$LLVM_REVISION"
+    fi
     
     # Apply Chromium patches if they exist
     local patches_dir="$CHROMIUM_DIR/tools/clang/scripts/patches"

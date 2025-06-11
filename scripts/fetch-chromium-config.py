@@ -72,11 +72,20 @@ def extract_llvm_info(chromium_dir):
     import re
     
     # Search for clang package with LLVM revision
-    pattern = r'clang-llvmorg-\d+-init-\d+-([a-f0-9]{8,})-\d+\.tar\.xz'
+    # Look for the full package name pattern
+    pattern = r'clang-llvmorg-(\d+)-init-(\d+)-([a-zA-Z0-9]{8,})-\d+'
     match = re.search(pattern, deps_content)
     
     if match:
-        llvm_revision = match.group(1)
+        major_version = match.group(1)
+        init_number = match.group(2) 
+        short_hash = match.group(3)
+        
+        # The revision is typically in the format: llvmorg-{version}-init-{number}-g{short_hash}
+        # But for LLVM project, we need to find the actual commit
+        # Let's try using the git tag format that LLVM uses
+        llvm_revision = f"llvmorg-{major_version}-init-{init_number}-g{short_hash}"
+        log(f"Constructed LLVM tag: {llvm_revision}")
     else:
         # Fallback: try to find revision in a more flexible way
         pattern = r'clang-llvmorg-\d+-init-\d+-([a-zA-Z0-9]{8,})-\d+'
