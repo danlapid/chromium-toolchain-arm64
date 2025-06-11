@@ -147,74 +147,38 @@ prepare_llvm_source() {
     cd "$REPO_ROOT"
 }
 
-# Configure LLVM build
-configure_llvm() {
-    log "Configuring LLVM build..."
+# Build LLVM using Chromium's build.py
+build_llvm_with_chromium_script() {
+    log "Building LLVM using Chromium's build.py script..."
     
-    local llvm_src_dir="$BUILD_DIR/llvm-project"
-    local llvm_build_dir="$BUILD_DIR/llvm-build"
+    local chromium_scripts_dir="$REPO_ROOT/chromium-scripts"
     
-    mkdir -p "$llvm_build_dir"
-    cd "$llvm_build_dir"
+    if [[ ! -f "$chromium_scripts_dir/build.py" ]]; then
+        error "Chromium build.py script not found at $chromium_scripts_dir/build.py"
+    fi
     
-    # CMake configuration based on Chromium's build.py
-    local cmake_args=(
-        -G Ninja
-        -DCMAKE_BUILD_TYPE=Release
-        -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
-        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt"
-        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
-        -DLLVM_TARGETS_TO_BUILD="AArch64;ARM;X86"
-        -DLLVM_ENABLE_ASSERTIONS=OFF
-        -DLLVM_ENABLE_BACKTRACES=ON
-        -DLLVM_ENABLE_CRASH_OVERRIDES=OFF
-        -DLLVM_ENABLE_DIA_SDK=OFF
-        -DLLVM_ENABLE_DUMP=OFF
-        -DLLVM_ENABLE_EXPENSIVE_CHECKS=OFF
-        -DLLVM_ENABLE_PDB=OFF
-        -DLLVM_ENABLE_TERMINFO=ON
-        -DLLVM_ENABLE_THREADS=ON
-        -DLLVM_ENABLE_WARNINGS=OFF
-        -DLLVM_ENABLE_ZLIB=ON
-        -DLLVM_OPTIMIZED_TABLEGEN=ON
-        -DLLVM_USE_LINKER=lld
-        -DCLANG_DEFAULT_LINKER=lld
-        -DCLANG_DEFAULT_CXX_STDLIB=libc++
-        -DCLANG_DEFAULT_RTLIB=compiler-rt
-        -DCOMPILER_RT_BUILD_BUILTINS=ON
-        -DCOMPILER_RT_BUILD_SANITIZERS=ON
-        -DCOMPILER_RT_BUILD_XRAY=ON
-        -DCOMPILER_RT_BUILD_LIBFUZZER=ON
-        -DCOMPILER_RT_BUILD_PROFILE=ON
-        -DLIBCXX_ENABLE_SHARED=ON
-        -DLIBCXX_ENABLE_STATIC=ON
-        -DLIBCXXABI_ENABLE_SHARED=ON
-        -DLIBCXXABI_ENABLE_STATIC=ON
-        -DLLVM_PARALLEL_LINK_JOBS=2
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-    )
+    # Set up environment for Chromium's build script
+    export LLVM_BUILD_DIR="$BUILD_DIR/llvm-build"
+    export LLVM_BOOTSTRAP_INSTALL_DIR="$INSTALL_DIR"
     
-    log "Running CMake with configuration..."
-    cmake "${cmake_args[@]}" "$llvm_src_dir/llvm" || error "CMake configuration failed"
+    # Chromium's build.py expects to be run from the clang/scripts directory
+    cd "$chromium_scripts_dir"
+    
+    # Run Chromium's build script with ARM64-specific options
+    log "Running Chromium's build.py script..."
+    python3 build.py \
+        --bootstrap \
+        --disable-asserts \
+        --pgo \
+        --without-android \
+        --without-fuchsia \
+        --lld \
+        --extra-tools \
+        --install-dir "$INSTALL_DIR" \
+        --build-dir "$BUILD_DIR" \
+        || error "Chromium build.py script failed"
 }
 
-# Build LLVM
-build_llvm() {
-    log "Building LLVM toolchain..."
-    
-    local llvm_build_dir="$BUILD_DIR/llvm-build"
-    cd "$llvm_build_dir"
-    
-    # Build with ninja
-    log "Starting ninja build (this will take a while)..."
-    ninja -j "$NPROC" || error "Build failed"
-    
-    log "Installing LLVM toolchain..."
-    ninja install || error "Installation failed"
-    
-    log "Build completed successfully!"
-}
 
 # Verify the built toolchain
 verify_toolchain() {
@@ -288,8 +252,7 @@ main() {
     setup_build_env
     get_llvm_revision
     prepare_llvm_source
-    configure_llvm
-    build_llvm
+    build_llvm_with_chromium_script
     verify_toolchain
     print_summary
     
