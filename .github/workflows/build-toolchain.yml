@@ -1,0 +1,146 @@
+name: Build Chromium LLVM Toolchain
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Build weekly to pick up Chromium updates
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      chromium_version:
+        description: 'Chromium version/branch (optional, defaults to main)'
+        required: false
+        default: 'main'
+
+jobs:
+  build-toolchain:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 480  # 8 hours max
+    
+    env:
+      CHROMIUM_VERSION: ${{ github.event.inputs.chromium_version || 'main' }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 2G
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Free up disk space
+      run: |
+        # Remove unnecessary packages to free up space
+        sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mongodb-.*' '^mysql-.*' '^postgresql-.*'
+        sudo apt-get autoremove -y
+        sudo apt-get autoclean
+        
+        # Remove large directories
+        sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+        
+        df -h
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          python3 \
+          python3-pip \
+          git \
+          curl \
+          ccache \
+          lsb-release \
+          software-properties-common \
+          gnupg \
+          zlib1g-dev \
+          libtinfo5 \
+          libxml2-dev
+    
+    - name: Setup ccache
+      uses: actions/cache@v4
+      with:
+        path: .ccache
+        key: ccache-arm64-${{ github.sha }}
+        restore-keys: |
+          ccache-arm64-
+    
+    - name: Configure ccache
+      run: |
+        ccache --set-config=max_size=2G
+        ccache --set-config=compression=true
+        ccache --zero-stats
+    
+    - name: Cache Chromium source
+      uses: actions/cache@v4
+      with:
+        path: chromium
+        key: chromium-src-${{ env.CHROMIUM_VERSION }}-${{ hashFiles('scripts/fetch-chromium-config.py') }}
+        restore-keys: |
+          chromium-src-${{ env.CHROMIUM_VERSION }}-
+          chromium-src-
+    
+    - name: Fetch Chromium configuration
+      run: |
+        chmod +x scripts/fetch-chromium-config.py
+        python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION"
+    
+    - name: Build toolchain
+      run: |
+        chmod +x scripts/build-toolchain.sh
+        ./scripts/build-toolchain.sh
+    
+    - name: Show ccache stats
+      run: ccache --show-stats
+    
+    - name: Package toolchain
+      run: |
+        chmod +x scripts/package-toolchain.sh
+        ./scripts/package-toolchain.sh
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-llvm-toolchain-linux-arm64
+        path: |
+          chromium-llvm-toolchain-*.tar.xz
+          chromium-llvm-toolchain-*.tar.xz.sha256
+        retention-days: 30
+    
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: toolchain-${{ github.run_number }}-${{ github.sha }}
+        name: Chromium LLVM Toolchain Build ${{ github.run_number }}
+        body: |
+          Chromium LLVM Toolchain built from Chromium ${{ env.CHROMIUM_VERSION }}
+          
+          **Build Information:**
+          - Built on: ${{ runner.os }} ${{ runner.arch }}
+          - Commit: ${{ github.sha }}
+          - Run ID: ${{ github.run_id }}
+          
+          **Components:**
+          - LLVM/Clang with Chromium patches
+          - LLD linker
+          - compiler-rt runtime libraries
+          - libc++/libc++abi
+          - LLVM tools and utilities
+          
+          **Usage:**
+          ```bash
+          wget https://github.com/${{ github.repository }}/releases/download/toolchain-${{ github.run_number }}-${{ github.sha }}/chromium-llvm-toolchain-linux-arm64.tar.xz
+          tar -xf chromium-llvm-toolchain-linux-arm64.tar.xz
+          export PATH=$PWD/chromium-llvm-toolchain/bin:$PATH
+          ```
+        files: |
+          chromium-llvm-toolchain-*.tar.xz
+          chromium-llvm-toolchain-*.tar.xz.sha256
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
