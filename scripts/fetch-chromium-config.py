@@ -140,6 +140,7 @@ def copy_build_scripts(chromium_dir, repo_root):
 
 def create_build_config(repo_root, llvm_revision):
     """Create a build configuration file"""
+    import datetime
     log("Creating build configuration...")
     
     config_file = repo_root / "build_config.sh"
@@ -203,7 +204,6 @@ def main():
         scripts_dir = copy_build_scripts(chromium_dir, repo_root)
         
         # Create build configuration
-        import datetime
         create_build_config(repo_root, llvm_revision)
         
         log("Successfully fetched Chromium configuration!")
