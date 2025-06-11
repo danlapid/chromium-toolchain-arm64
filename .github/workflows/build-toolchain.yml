@@ -31,13 +31,13 @@ jobs:
     
     - name: Free up disk space
       run: |
-        # Remove unnecessary packages to free up space
-        sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mongodb-.*' '^mysql-.*' '^postgresql-.*'
-        sudo apt-get autoremove -y
-        sudo apt-get autoclean
+        # # Remove unnecessary packages to free up space
+        # sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mongodb-.*' '^mysql-.*' '^postgresql-.*'
+        # sudo apt-get autoremove -y
+        # sudo apt-get autoclean
         
-        # Remove large directories
-        sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+        # # Remove large directories
+        # sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
         
         df -h
     
@@ -57,7 +57,7 @@ jobs:
           software-properties-common \
           gnupg \
           zlib1g-dev \
-          libtinfo5 \
+          libtinfo6 \
           libxml2-dev
     
     - name: Setup ccache
