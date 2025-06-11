@@ -172,10 +172,6 @@ build_llvm_with_chromium_script() {
         --pgo \
         --without-android \
         --without-fuchsia \
-        --lld \
-        --extra-tools \
-        --install-dir "$INSTALL_DIR" \
-        --build-dir "$BUILD_DIR" \
         || error "Chromium build.py script failed"
 }
 
