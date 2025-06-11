@@ -68,7 +68,7 @@ get_llvm_revision() {
     log "Getting LLVM revision from Chromium..."
     
     # Use our Python script to extract the LLVM revision
-    if ! LLVM_REVISION=$("$SCRIPT_DIR/fetch-chromium-config.py" --chromium-dir "$CHROMIUM_DIR" 2>/dev/null | grep "Found LLVM revision:" | sed 's/.*Found LLVM revision: \([a-zA-Z0-9]*\).*/\1/'); then
+    if ! LLVM_REVISION=$("$SCRIPT_DIR/fetch-chromium-config.py" --chromium-dir "$CHROMIUM_DIR" 2>/dev/null | grep "Found LLVM revision:" | sed 's/.*Found LLVM revision: \([a-zA-Z0-9-]*\).*/\1/'); then
         # Fallback: extract directly from DEPS file using the new format
         if [[ -f "$CHROMIUM_DIR/DEPS" ]]; then
             log "Extracting LLVM revision from DEPS file..."
