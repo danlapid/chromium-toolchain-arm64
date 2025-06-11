@@ -151,15 +151,16 @@ prepare_llvm_source() {
 build_llvm_with_chromium_script() {
     log "Building LLVM using Chromium's build.py script..."
     
+    # Use the dynamically fetched chromium-scripts directory
     local chromium_scripts_dir="$REPO_ROOT/chromium-scripts"
+    
+    if [[ ! -d "$chromium_scripts_dir" ]]; then
+        error "Chromium scripts directory not found at $chromium_scripts_dir. Did fetch-chromium-config.py run successfully?"
+    fi
     
     if [[ ! -f "$chromium_scripts_dir/build.py" ]]; then
         error "Chromium build.py script not found at $chromium_scripts_dir/build.py"
     fi
-    
-    # Set up environment for Chromium's build script
-    export LLVM_BUILD_DIR="$BUILD_DIR/llvm-build"
-    export LLVM_BOOTSTRAP_INSTALL_DIR="$INSTALL_DIR"
     
     # Chromium's build.py expects to be run from the clang/scripts directory
     cd "$chromium_scripts_dir"
