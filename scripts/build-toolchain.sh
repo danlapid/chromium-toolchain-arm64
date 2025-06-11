@@ -67,12 +67,14 @@ setup_build_env() {
 get_llvm_revision() {
     log "Getting LLVM revision from Chromium..."
     
-    if [[ ! -d "$CHROMIUM_DIR" ]]; then
-        error "Chromium directory not found at $CHROMIUM_DIR"
+    # Use our Python script to extract the LLVM revision
+    if ! LLVM_REVISION=$("$SCRIPT_DIR/fetch-chromium-config.py" --chromium-dir "$CHROMIUM_DIR" 2>/dev/null | grep "Found LLVM revision:" | sed 's/.*Found LLVM revision: \([a-zA-Z0-9]*\).*/\1/'); then
+        # Fallback: extract directly from DEPS file using the new format
+        if [[ -f "$CHROMIUM_DIR/DEPS" ]]; then
+            log "Extracting LLVM revision from DEPS file..."
+            LLVM_REVISION=$(grep -o 'clang-llvmorg-[0-9]*-init-[0-9]*-[a-zA-Z0-9]*-[0-9]*\.tar\.xz' "$CHROMIUM_DIR/DEPS" | head -1 | sed 's/.*-\([a-zA-Z0-9]*\)-[0-9]*\.tar\.xz/\1/')
+        fi
     fi
-    
-    # Extract LLVM revision from DEPS file
-    LLVM_REVISION=$(grep -A 10 "'llvm_url'" "$CHROMIUM_DIR/DEPS" | grep "'llvm_revision'" | sed "s/.*'llvm_revision': '\([^']*\)'.*/\1/")
     
     if [[ -z "$LLVM_REVISION" ]]; then
         error "Could not extract LLVM revision from Chromium DEPS"

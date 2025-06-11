@@ -66,20 +66,27 @@ def extract_llvm_info(chromium_dir):
     with open(deps_file, 'r') as f:
         deps_content = f.read()
     
-    # Extract LLVM revision
+    # Extract LLVM revision from clang package name
+    # Look for pattern like: clang-llvmorg-21-init-11777-gfd3fecfc-1.tar.xz
     llvm_revision = None
-    lines = deps_content.split('\n')
+    import re
     
-    for i, line in enumerate(lines):
-        if "'llvm_revision'" in line:
-            # Extract the revision hash
-            start = line.find("'") + 1
-            end = line.rfind("'")
-            llvm_revision = line[start:end]
-            break
+    # Search for clang package with LLVM revision
+    pattern = r'clang-llvmorg-\d+-init-\d+-([a-f0-9]{8,})-\d+\.tar\.xz'
+    match = re.search(pattern, deps_content)
+    
+    if match:
+        llvm_revision = match.group(1)
+    else:
+        # Fallback: try to find revision in a more flexible way
+        pattern = r'clang-llvmorg-\d+-init-\d+-([a-zA-Z0-9]{8,})-\d+'
+        match = re.search(pattern, deps_content)
+        if match:
+            llvm_revision = match.group(1)
     
     if not llvm_revision:
         log("ERROR: Could not find LLVM revision in DEPS file")
+        log("Searched for clang package names with LLVM revision")
         sys.exit(1)
     
     log(f"Found LLVM revision: {llvm_revision}")
