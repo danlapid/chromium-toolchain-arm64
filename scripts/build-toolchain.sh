@@ -165,6 +165,18 @@ build_llvm_with_chromium_script() {
     # Chromium's build.py expects to be run from the clang/scripts directory
     cd "$chromium_scripts_dir"
     
+    # Debug environment before running Chromium's build
+    log "Environment debug info:"
+    echo "  PWD: $(pwd)"
+    echo "  CMAKE in PATH: $(which cmake 2>/dev/null || echo 'not found')"
+    echo "  CMAKE version: $(cmake --version 2>/dev/null | head -1 || echo 'not available')"
+    echo "  CMAKE_ROOT: ${CMAKE_ROOT:-'not set'}"
+    echo "  PATH: $PATH"
+    
+    # Clear CMAKE environment variables that might interfere
+    log "Clearing CMAKE environment variables..."
+    unset CMAKE_ROOT CMAKE_MODULE_PATH CMAKE_PREFIX_PATH CMAKE_PROGRAM_PATH
+    
     # Run Chromium's build script with ARM64-specific options
     log "Running Chromium's build.py script..."
     python3 build.py \
