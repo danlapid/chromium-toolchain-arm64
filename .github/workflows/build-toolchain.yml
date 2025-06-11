@@ -58,7 +58,8 @@ jobs:
           gnupg \
           zlib1g-dev \
           libtinfo6 \
-          libxml2-dev
+          libxml2-dev \
+          lld
     
     - name: Setup ccache
       uses: actions/cache@v4
