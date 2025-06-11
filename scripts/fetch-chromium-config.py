@@ -77,15 +77,12 @@ def extract_llvm_info(chromium_dir):
     match = re.search(pattern, deps_content)
     
     if match:
-        major_version = match.group(1)
-        init_number = match.group(2) 
         short_hash = match.group(3)
         
-        # The revision is typically in the format: llvmorg-{version}-init-{number}-g{short_hash}
-        # But for LLVM project, we need to find the actual commit
-        # Let's try using the git tag format that LLVM uses
-        llvm_revision = f"llvmorg-{major_version}-init-{init_number}-g{short_hash}"
-        log(f"Constructed LLVM tag: {llvm_revision}")
+        # Just use the short hash - we'll resolve it to full hash in the build script
+        # The LLVM tags like llvmorg-21-init-X don't exist yet for version 21
+        llvm_revision = short_hash
+        log(f"Extracted short hash from clang package: {llvm_revision}")
     else:
         # Fallback: try to find revision in a more flexible way
         pattern = r'clang-llvmorg-\d+-init-\d+-([a-zA-Z0-9]{8,})-\d+'

@@ -90,9 +90,12 @@ prepare_llvm_source() {
     
     local llvm_src_dir="$BUILD_DIR/llvm-project"
     
+    # Clone with optimizations for speed
     if [[ ! -d "$llvm_src_dir" ]]; then
-        log "Cloning LLVM project..."
-        git clone --depth 1 https://github.com/llvm/llvm-project.git "$llvm_src_dir"
+        log "Cloning LLVM project (optimized for speed)..."
+        # Use shallow clone with single branch to speed up
+        git clone --depth 1 --single-branch --branch main \
+            https://github.com/llvm/llvm-project.git "$llvm_src_dir"
     fi
     
     cd "$llvm_src_dir"
@@ -100,38 +103,54 @@ prepare_llvm_source() {
     # Checkout specific revision
     log "Checking out LLVM revision $LLVM_REVISION..."
     
-    # Try to fetch the revision/tag
-    if [[ "$LLVM_REVISION" =~ ^llvmorg- ]]; then
-        # It's a tag, fetch all tags
-        log "Detected LLVM tag format, fetching tags..."
-        git fetch --tags origin
-        git checkout "$LLVM_REVISION"
-    elif [[ ${#LLVM_REVISION} -le 12 ]]; then
-        # It's a short hash, we need to fetch more to resolve it
-        log "Short hash detected, fetching more commits to resolve full hash..."
-        git fetch --unshallow origin main || git fetch --depth 10000 origin main
+    # For short hashes, we need to resolve them to full hashes
+    if [[ ${#LLVM_REVISION} -le 12 ]]; then
+        log "Short hash detected, resolving to full commit hash..."
         
-        # Find the full hash
-        FULL_HASH=$(git rev-parse --verify "${LLVM_REVISION}^{commit}" 2>/dev/null || echo "")
-        if [[ -n "$FULL_HASH" ]]; then
-            log "Resolved short hash $LLVM_REVISION to full hash: $FULL_HASH"
-            LLVM_REVISION="$FULL_HASH"
-            git checkout "$LLVM_REVISION"
-        else
-            log "Could not resolve short hash, trying to fetch all commits..."
-            git fetch --unshallow origin || true
-            FULL_HASH=$(git rev-parse --verify "${LLVM_REVISION}^{commit}" 2>/dev/null || echo "")
-            if [[ -n "$FULL_HASH" ]]; then
+        # Strategy: fetch recent commits in batches until we find the hash
+        local fetch_depth=1000
+        local max_attempts=10
+        local attempt=1
+        local found=false
+        
+        while [[ $attempt -le $max_attempts && "$found" == "false" ]]; do
+            log "Attempt $attempt: Fetching $fetch_depth commits..."
+            git fetch --depth $fetch_depth origin main
+            
+            # Try to resolve the short hash
+            if FULL_HASH=$(git rev-parse --verify "${LLVM_REVISION}^{commit}" 2>/dev/null); then
                 log "Resolved short hash $LLVM_REVISION to full hash: $FULL_HASH"
                 LLVM_REVISION="$FULL_HASH"
-                git checkout "$LLVM_REVISION"
+                found=true
+                break
+            fi
+            
+            # Increase fetch depth for next attempt
+            fetch_depth=$((fetch_depth * 2))
+            attempt=$((attempt + 1))
+        done
+        
+        if [[ "$found" == "false" ]]; then
+            log "Could not find hash in recent commits, doing full fetch..."
+            git fetch --unshallow origin main
+            if FULL_HASH=$(git rev-parse --verify "${LLVM_REVISION}^{commit}" 2>/dev/null); then
+                log "Resolved short hash $LLVM_REVISION to full hash: $FULL_HASH"
+                LLVM_REVISION="$FULL_HASH"
             else
                 error "Could not resolve LLVM revision: $LLVM_REVISION"
             fi
         fi
+        
+        git checkout "$LLVM_REVISION"
     else
-        # It's likely a full hash
-        git fetch --depth 1 origin "$LLVM_REVISION" || git fetch --unshallow origin
+        # It's likely a full hash or tag
+        if [[ "$LLVM_REVISION" =~ ^llvmorg- ]]; then
+            # It's a tag, fetch tags
+            git fetch --tags origin
+        else
+            # Try to fetch the specific commit
+            git fetch --depth 1 origin "$LLVM_REVISION" 2>/dev/null || git fetch --unshallow origin main
+        fi
         git checkout "$LLVM_REVISION"
     fi
     
