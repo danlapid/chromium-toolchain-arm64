@@ -170,9 +170,12 @@ build_llvm_with_chromium_script() {
     echo "  PWD: $(pwd)"
     echo "  CMAKE: $(which cmake)"
     echo "  CMAKE version: $(cmake --version | head -1)"
+    echo "  CLANG: $(which clang)"
+    echo "  CLANG version: $(clang --version | head -1)"
+    echo "  CLANG++ version: $(clang++ --version | head -1)"
     
     # Run Chromium's build script with ARM64-specific options
-    log "Running Chromium's build.py script with system cmake..."
+    log "Running Chromium's build.py script with system compilers..."
     python3 build.py \
         --bootstrap \
         --disable-asserts \
@@ -180,6 +183,8 @@ build_llvm_with_chromium_script() {
         --without-android \
         --without-fuchsia \
         --use-system-cmake \
+        --host-cc clang \
+        --host-cxx clang++ \
         || error "Chromium build.py script failed"
 }
 
