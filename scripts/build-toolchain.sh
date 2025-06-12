@@ -174,12 +174,16 @@ build_llvm_with_chromium_script() {
     echo "  CLANG version: $(clang --version | head -1)"
     echo "  CLANG++ version: $(clang++ --version | head -1)"
     
-    # Run Chromium's build script with ARM64-specific options
+    # Run Chromium's build script with ARM64-specific options  
     log "Running Chromium's build.py script with system compilers..."
+    
+    # Debug: show platform detection
+    log "Platform detection debug:"
+    python3 -c "import platform, sys; print(f'  platform.machine(): {platform.machine()}'); print(f'  sys.platform: {sys.platform}')"
+    
     python3 build.py \
         --bootstrap \
         --disable-asserts \
-        --pgo \
         --without-android \
         --without-fuchsia \
         --use-system-cmake \
