@@ -168,28 +168,18 @@ build_llvm_with_chromium_script() {
     # Debug environment before running Chromium's build
     log "Environment debug info:"
     echo "  PWD: $(pwd)"
-    echo "  CMAKE in PATH: $(which cmake 2>/dev/null || echo 'removed from PATH (good)')"
-    if which cmake >/dev/null 2>&1; then
-        echo "  CMAKE version: $(cmake --version | head -1)"
-    fi
-    echo "  CMAKE_ROOT: ${CMAKE_ROOT:-'not set'}"
-    echo "  PATH: $PATH"
-    
-    # Clear CMAKE environment variables that might interfere
-    log "Clearing CMAKE environment variables..."
-    unset CMAKE_ROOT CMAKE_MODULE_PATH CMAKE_PREFIX_PATH CMAKE_PROGRAM_PATH CMAKE_INSTALL_PREFIX
-    
-    # Ensure clean environment for Chromium's build.py
-    log "Letting Chromium's build.py manage its own CMake installation..."
+    echo "  CMAKE: $(which cmake)"
+    echo "  CMAKE version: $(cmake --version | head -1)"
     
     # Run Chromium's build script with ARM64-specific options
-    log "Running Chromium's build.py script..."
+    log "Running Chromium's build.py script with system cmake..."
     python3 build.py \
         --bootstrap \
         --disable-asserts \
         --pgo \
         --without-android \
         --without-fuchsia \
+        --use-system-cmake \
         || error "Chromium build.py script failed"
 }
 
