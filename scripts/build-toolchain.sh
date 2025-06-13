@@ -256,7 +256,7 @@ int main() {
 EOF
     
     # Compile test program
-    "$bin_dir/clang++" -stdlib=libc++ -std=c++17 -O2 \
+    "$bin_dir/clang++" -target aarch64-unknown-linux-gnu -stdlib=libc++ -std=c++17 -O2 \
         "$BUILD_DIR/test.cpp" -o "$BUILD_DIR/test" || error "Test compilation failed"
     
     # Run test program
