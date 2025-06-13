@@ -75,8 +75,9 @@ jobs:
       run: |
         chmod +x scripts/fetch-chromium-config.py
         python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION" 2>/dev/null || true
-        if [[ -f chromium-scripts/llvm_revision.txt ]]; then
-          LLVM_REV=$(cat chromium-scripts/llvm_revision.txt)
+        # Extract LLVM revision from build_config.sh that was created by fetch script
+        if [[ -f build_config.sh ]]; then
+          LLVM_REV=$(grep '^export LLVM_REVISION=' build_config.sh | sed 's/^export LLVM_REVISION="\(.*\)"/\1/')
           echo "llvm_revision=${LLVM_REV}" >> $GITHUB_OUTPUT
         else
           echo "llvm_revision=unknown" >> $GITHUB_OUTPUT
