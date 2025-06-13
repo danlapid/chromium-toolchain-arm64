@@ -44,10 +44,10 @@ setup_build_env() {
     # Create directories
     mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
     
-    # Set up compiler cache
-    export CC="ccache gcc"
-    export CXX="ccache g++"
+    # Set up ccache directory (but don't override CC/CXX since we use --with-ccache)
     export CCACHE_DIR="${CCACHE_DIR:-$HOME/.ccache}"
+    mkdir -p "$CCACHE_DIR"
+    log "Ccache directory: $CCACHE_DIR"
     
     # Get number of CPU cores for parallel builds
     export NPROC=$(nproc)
@@ -173,6 +173,12 @@ build_llvm_with_chromium_script() {
     echo "  CLANG: $(which clang)"
     echo "  CLANG version: $(clang --version | head -1)"
     echo "  CLANG++ version: $(clang++ --version | head -1)"
+    echo "  CCACHE: $(which ccache)"
+    echo "  CCACHE_DIR: ${CCACHE_DIR:-not set}"
+    
+    # Show ccache stats before build
+    log "Ccache stats before build:"
+    ccache --show-stats || echo "  (ccache stats not available)"
     
     # Run Chromium's build script with ARM64-specific options  
     log "Running Chromium's build.py script with system compilers..."
@@ -190,6 +196,7 @@ build_llvm_with_chromium_script() {
         --use-system-cmake \
         --host-cc clang \
         --host-cxx clang++ \
+        --with-ccache \
         || {
             # If the full build fails but bootstrap succeeded, use the bootstrap
             if [[ -d "/home/runner/work/third_party/llvm-bootstrap-install" ]]; then

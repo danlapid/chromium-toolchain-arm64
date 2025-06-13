@@ -65,7 +65,7 @@ jobs:
     - name: Setup ccache
       uses: actions/cache@v4
       with:
-        path: .ccache
+        path: ${{ env.CCACHE_DIR }}
         key: ccache-arm64-${{ github.sha }}
         restore-keys: |
           ccache-arm64-
