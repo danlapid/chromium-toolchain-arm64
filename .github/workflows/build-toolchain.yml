@@ -70,13 +70,25 @@ jobs:
         # Verify vpython3 is available
         which vpython3
     
+    - name: Get LLVM revision for cache key
+      id: llvm-rev
+      run: |
+        chmod +x scripts/fetch-chromium-config.py
+        python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION" 2>/dev/null || true
+        if [[ -f chromium-scripts/llvm_revision.txt ]]; then
+          LLVM_REV=$(cat chromium-scripts/llvm_revision.txt)
+          echo "llvm_revision=${LLVM_REV}" >> $GITHUB_OUTPUT
+        else
+          echo "llvm_revision=unknown" >> $GITHUB_OUTPUT
+        fi
+
     - name: Setup ccache
       uses: actions/cache@v4
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ccache-arm64-${{ env.CHROMIUM_VERSION }}-${{ hashFiles('scripts/fetch-chromium-config.py') }}
+        key: ccache-arm64-llvm-${{ steps.llvm-rev.outputs.llvm_revision }}
         restore-keys: |
-          ccache-arm64-${{ env.CHROMIUM_VERSION }}-
+          ccache-arm64-llvm-
           ccache-arm64-
     
     - name: Configure ccache
@@ -91,15 +103,20 @@ jobs:
       uses: actions/cache@v4
       with:
         path: chromium
-        key: chromium-src-${{ env.CHROMIUM_VERSION }}-${{ hashFiles('scripts/fetch-chromium-config.py') }}
+        key: chromium-src-llvm-${{ steps.llvm-rev.outputs.llvm_revision }}
         restore-keys: |
-          chromium-src-${{ env.CHROMIUM_VERSION }}-
+          chromium-src-llvm-
           chromium-src-
     
     - name: Fetch Chromium configuration
       run: |
-        chmod +x scripts/fetch-chromium-config.py
-        python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION"
+        # Skip fetch if we already got the LLVM revision and have chromium-scripts
+        if [[ ! -d "chromium-scripts" ]]; then
+          chmod +x scripts/fetch-chromium-config.py
+          python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION"
+        else
+          echo "Chromium configuration already fetched for LLVM revision: ${{ steps.llvm-rev.outputs.llvm_revision }}"
+        fi
     
     - name: Build toolchain
       run: |
