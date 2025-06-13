@@ -221,8 +221,8 @@ verify_toolchain() {
         bin_dir="/home/runner/work/third_party/llvm-bootstrap-install/bin"
         # Copy bootstrap to expected location for packaging
         log "Copying bootstrap installation to final location..."
-        mkdir -p "$(dirname "$INSTALL_DIR")"
-        cp -r "/home/runner/work/third_party/llvm-bootstrap-install" "$INSTALL_DIR"
+        mkdir -p "$INSTALL_DIR"
+        cp -r "/home/runner/work/third_party/llvm-bootstrap-install/"* "$INSTALL_DIR/"
         bin_dir="$INSTALL_DIR/bin"
     fi
     
