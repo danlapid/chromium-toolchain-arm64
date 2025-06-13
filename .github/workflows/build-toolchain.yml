@@ -108,6 +108,7 @@ jobs:
         ./scripts/build-toolchain.sh
     
     - name: Show ccache stats
+      if: always()
       run: |
         echo "Ccache stats after build:"
         ccache --show-stats
