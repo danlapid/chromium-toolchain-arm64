@@ -74,15 +74,18 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ccache-arm64-${{ github.sha }}
+        key: ccache-arm64-${{ env.CHROMIUM_VERSION }}-${{ hashFiles('scripts/fetch-chromium-config.py') }}
         restore-keys: |
+          ccache-arm64-${{ env.CHROMIUM_VERSION }}-
           ccache-arm64-
     
     - name: Configure ccache
       run: |
         ccache --set-config=max_size=2G
         ccache --set-config=compression=true
-        ccache --zero-stats
+        # Show initial stats (don't zero them to preserve cache effectiveness)
+        echo "Ccache stats before build:"
+        ccache --show-stats
     
     - name: Cache Chromium source
       uses: actions/cache@v4
@@ -105,7 +108,12 @@ jobs:
         ./scripts/build-toolchain.sh
     
     - name: Show ccache stats
-      run: ccache --show-stats
+      run: |
+        echo "Ccache stats after build:"
+        ccache --show-stats
+        echo ""
+        echo "Ccache efficiency:"
+        ccache --show-stats | grep -E "(cache hit|cache miss|hit rate)"
     
     - name: Package toolchain
       run: |
