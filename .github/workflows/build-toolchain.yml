@@ -23,7 +23,7 @@ jobs:
     env:
       CHROMIUM_VERSION: ${{ github.event.inputs.chromium_version || 'main' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_MAXSIZE: 2G
+      CCACHE_MAXSIZE: 10G
     
     steps:
     - name: Checkout repository
@@ -81,7 +81,7 @@ jobs:
     
     - name: Configure ccache
       run: |
-        ccache --set-config=max_size=2G
+        ccache --set-config=max_size=10G
         ccache --set-config=compression=true
         # Show initial stats (don't zero them to preserve cache effectiveness)
         echo "Ccache stats before build:"
