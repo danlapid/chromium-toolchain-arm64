@@ -187,7 +187,7 @@ build_llvm_with_chromium_script() {
     log "Platform detection debug:"
     python3 -c "import platform, sys; print(f'  platform.machine(): {platform.machine()}'); print(f'  sys.platform: {sys.platform}')"
     
-    # Build only the bootstrap compiler to avoid vpython3 dependency in final stage
+    # Build using Chromium's complete environment
     python3 build.py \
         --bootstrap \
         --disable-asserts \
@@ -197,16 +197,7 @@ build_llvm_with_chromium_script() {
         --host-cc clang \
         --host-cxx clang++ \
         --with-ccache \
-        || {
-            # If the full build fails but bootstrap succeeded, use the bootstrap
-            if [[ -d "/home/runner/work/third_party/llvm-bootstrap-install" ]]; then
-                log "Main build failed, but bootstrap compiler was built successfully"
-                log "Using bootstrap compiler as final result..."
-                return 0
-            else
-                error "Chromium build.py script failed"
-            fi
-        }
+        || error "Chromium build.py script failed"
 }
 
 
