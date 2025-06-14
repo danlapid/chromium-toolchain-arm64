@@ -87,10 +87,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ccache-arm64-llvm-${{ steps.llvm-rev.outputs.llvm_revision }}
-        restore-keys: |
-          ccache-arm64-llvm-
-          ccache-arm64-
+        key: ccache-arm64
     
     - name: Configure ccache
       run: |
@@ -99,15 +96,6 @@ jobs:
         # Show initial stats (don't zero them to preserve cache effectiveness)
         echo "Ccache stats before build:"
         ccache --show-stats
-    
-    - name: Cache Chromium source
-      uses: actions/cache@v4
-      with:
-        path: chromium
-        key: chromium-src-llvm-${{ steps.llvm-rev.outputs.llvm_revision }}
-        restore-keys: |
-          chromium-src-llvm-
-          chromium-src-
     
     - name: Fetch Chromium configuration
       run: |
@@ -121,8 +109,6 @@ jobs:
     
     - name: Build toolchain
       run: |
-        # Use system cmake with --use-system-cmake flag
-        chmod +x scripts/build-toolchain.sh
         ./scripts/build-toolchain.sh
     
     - name: Show ccache stats
@@ -148,37 +134,37 @@ jobs:
           chromium-llvm-toolchain-*.tar.xz.sha256
         retention-days: 30
     
-    - name: Create Release
-      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: toolchain-${{ github.run_number }}-${{ github.sha }}
-        name: Chromium LLVM Toolchain Build ${{ github.run_number }}
-        body: |
-          Chromium LLVM Toolchain built from Chromium ${{ env.CHROMIUM_VERSION }}
+    # - name: Create Release
+    #   if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    #   uses: softprops/action-gh-release@v1
+    #   with:
+    #     tag_name: toolchain-${{ github.run_number }}-${{ github.sha }}
+    #     name: Chromium LLVM Toolchain Build ${{ github.run_number }}
+    #     body: |
+    #       Chromium LLVM Toolchain built from Chromium ${{ env.CHROMIUM_VERSION }}
           
-          **Build Information:**
-          - Built on: ${{ runner.os }} ${{ runner.arch }}
-          - Commit: ${{ github.sha }}
-          - Run ID: ${{ github.run_id }}
+    #       **Build Information:**
+    #       - Built on: ${{ runner.os }} ${{ runner.arch }}
+    #       - Commit: ${{ github.sha }}
+    #       - Run ID: ${{ github.run_id }}
           
-          **Components:**
-          - LLVM/Clang with Chromium patches
-          - LLD linker
-          - compiler-rt runtime libraries
-          - libc++/libc++abi
-          - LLVM tools and utilities
+    #       **Components:**
+    #       - LLVM/Clang with Chromium patches
+    #       - LLD linker
+    #       - compiler-rt runtime libraries
+    #       - libc++/libc++abi
+    #       - LLVM tools and utilities
           
-          **Usage:**
-          ```bash
-          wget https://github.com/${{ github.repository }}/releases/download/toolchain-${{ github.run_number }}-${{ github.sha }}/chromium-llvm-toolchain-linux-arm64.tar.xz
-          tar -xf chromium-llvm-toolchain-linux-arm64.tar.xz
-          export PATH=$PWD/chromium-llvm-toolchain/bin:$PATH
-          ```
-        files: |
-          chromium-llvm-toolchain-*.tar.xz
-          chromium-llvm-toolchain-*.tar.xz.sha256
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #       **Usage:**
+    #       ```bash
+    #       wget https://github.com/${{ github.repository }}/releases/download/toolchain-${{ github.run_number }}-${{ github.sha }}/chromium-llvm-toolchain-linux-arm64.tar.xz
+    #       tar -xf chromium-llvm-toolchain-linux-arm64.tar.xz
+    #       export PATH=$PWD/chromium-llvm-toolchain/bin:$PATH
+    #       ```
+    #     files: |
+    #       chromium-llvm-toolchain-*.tar.xz
+    #       chromium-llvm-toolchain-*.tar.xz.sha256
+    #     draft: false
+    #     prerelease: false
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
