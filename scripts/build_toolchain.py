@@ -114,6 +114,7 @@ def build_llvm(chromium_dir):
         "--host-cc", "clang",
         "--host-cxx", "clang++",
         "--disable-asserts",
+        "--with-ml-inliner-model", "",
     ]
 
     try:
