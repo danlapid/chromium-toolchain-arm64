@@ -109,19 +109,17 @@ jobs:
         echo "Ccache efficiency:"
         ccache --show-stats | grep -E "(cache hit|cache miss|hit rate)"
     
-    - name: Package toolchain
-      run: |
-        cd chromium/tools/clang/scripts
-        python3 package.py
+    # - name: Package toolchain
+    #   run: |
+    #     cd chromium/tools/clang/scripts
+    #     python3 package.py
     
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: chromium-llvm-toolchain-linux-arm64
-        path: |
-          chromium-llvm-toolchain-*.tar.xz
-          chromium-llvm-toolchain-*.tar.xz.sha256
-        retention-days: 30
+    # - name: Upload build artifacts
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: chromium-llvm-toolchain-linux-arm64
+    #     path: "*.tar.xz*"
+    #     retention-days: 30
     
     # - name: Create Release
     #   if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
