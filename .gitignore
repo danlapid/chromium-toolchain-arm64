@@ -1,2 +1,7 @@
 chromium/
 chromium-scripts/
+ccache/
+build_config.sh
+build
+.claude/
+.devcontainer/

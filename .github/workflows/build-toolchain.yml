@@ -29,24 +29,23 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Free up disk space
-      run: |
-        # # Remove unnecessary packages to free up space
-        # sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mongodb-.*' '^mysql-.*' '^postgresql-.*'
-        # sudo apt-get autoremove -y
-        # sudo apt-get autoclean
+    # - name: Free up disk space
+    #   run: |
+    #     # # Remove unnecessary packages to free up space
+    #     # sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^php.*' '^mongodb-.*' '^mysql-.*' '^postgresql-.*'
+    #     # sudo apt-get autoremove -y
+    #     # sudo apt-get autoclean
         
-        # # Remove large directories
-        # sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+    #     # # Remove large directories
+    #     # sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
         
-        df -h
+    #     df -h
     
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
-          clang \
           cmake \
           ninja-build \
           python3 \
@@ -59,8 +58,14 @@ jobs:
           gnupg \
           zlib1g-dev \
           libtinfo6 \
-          libxml2-dev \
-          lld
+          libxml2-dev
+    
+    - name: Install LLVM/Clang via llvm.sh
+      run: |
+        curl -fsSL https://apt.llvm.org/llvm.sh -o llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 21 all
+        echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
     
     - name: Install depot_tools for vpython3
       run: |
@@ -73,15 +78,10 @@ jobs:
     - name: Get LLVM revision for cache key
       id: llvm-rev
       run: |
-        chmod +x scripts/fetch-chromium-config.py
-        python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION" 2>/dev/null || true
+        python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION"
         # Extract LLVM revision from build_config.sh that was created by fetch script
-        if [[ -f build_config.sh ]]; then
-          LLVM_REV=$(grep '^export LLVM_REVISION=' build_config.sh | sed 's/^export LLVM_REVISION="\(.*\)"/\1/')
-          echo "llvm_revision=${LLVM_REV}" >> $GITHUB_OUTPUT
-        else
-          echo "llvm_revision=unknown" >> $GITHUB_OUTPUT
-        fi
+        LLVM_REV=$(grep '^export LLVM_REVISION=' build_config.sh | sed 's/^export LLVM_REVISION="\(.*\)"/\1/')
+        echo "llvm_revision=${LLVM_REV}" >> $GITHUB_OUTPUT
 
     - name: Setup ccache
       uses: actions/cache@v4
@@ -96,16 +96,6 @@ jobs:
         # Show initial stats (don't zero them to preserve cache effectiveness)
         echo "Ccache stats before build:"
         ccache --show-stats
-    
-    - name: Fetch Chromium configuration
-      run: |
-        # Skip fetch if we already got the LLVM revision and have chromium-scripts
-        if [[ ! -d "chromium-scripts" ]]; then
-          chmod +x scripts/fetch-chromium-config.py
-          python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION"
-        else
-          echo "Chromium configuration already fetched for LLVM revision: ${{ steps.llvm-rev.outputs.llvm_revision }}"
-        fi
     
     - name: Build toolchain
       run: |
@@ -122,7 +112,6 @@ jobs:
     
     - name: Package toolchain
       run: |
-        chmod +x scripts/package-toolchain.sh
         ./scripts/package-toolchain.sh
     
     - name: Upload build artifacts
