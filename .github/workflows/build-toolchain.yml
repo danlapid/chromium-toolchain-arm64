@@ -66,6 +66,7 @@ jobs:
         chmod +x llvm.sh
         sudo ./llvm.sh 21 all
         echo "/usr/lib/llvm-21/bin" >> $GITHUB_PATH
+        export PATH="/usr/lib/llvm-21/bin:$PATH"
     
     - name: Install depot_tools for vpython3
       run: |
@@ -78,9 +79,7 @@ jobs:
     - name: Get LLVM revision for cache key
       id: llvm-rev
       run: |
-        python3 scripts/fetch-chromium-config.py --version "$CHROMIUM_VERSION"
-        # Extract LLVM revision from build_config.sh that was created by fetch script
-        LLVM_REV=$(grep '^export LLVM_REVISION=' build_config.sh | sed 's/^export LLVM_REVISION="\(.*\)"/\1/')
+        LLVM_REV=$(python3 scripts/build_toolchain.py --version "$CHROMIUM_VERSION" --get-llvm-revision)
         echo "llvm_revision=${LLVM_REV}" >> $GITHUB_OUTPUT
 
     - name: Setup ccache
@@ -99,7 +98,7 @@ jobs:
     
     - name: Build toolchain
       run: |
-        ./scripts/build-toolchain.sh
+        python3 scripts/build_toolchain.py --version "$CHROMIUM_VERSION"
     
     - name: Show ccache stats
       if: always()
