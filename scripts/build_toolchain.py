@@ -113,6 +113,7 @@ def build_llvm(chromium_dir):
         "--use-system-cmake",
         "--host-cc", "clang",
         "--host-cxx", "clang++",
+        "--disable-asserts",
     ]
 
     try:
