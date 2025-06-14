@@ -24,6 +24,7 @@ jobs:
       CHROMIUM_VERSION: ${{ github.event.inputs.chromium_version || 'main' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 10G
+      VPYTHON_BYPASS: "manually managed python not supported by chrome operations"
     
     steps:
     - name: Checkout repository
@@ -72,7 +73,7 @@ jobs:
       run: |
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
         echo "$PWD/depot_tools" >> $GITHUB_PATH
-        export PATH="$PWD/depot_tools:$PATH"
+        export PATH="$PATH:$PWD/depot_tools"
         # Verify vpython3 is available
         which vpython3
     
