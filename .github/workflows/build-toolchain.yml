@@ -111,7 +111,8 @@ jobs:
     
     - name: Package toolchain
       run: |
-        ./scripts/package-toolchain.sh
+        cd chromium/tools/clang/scripts
+        python3 package.py
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

@@ -48,8 +48,6 @@ class ChromiumToolchainBuilder:
     def __init__(self, chromium_version="main"):
         self.script_dir = Path(__file__).parent.resolve()
         self.repo_root = self.script_dir.parent
-        self.build_dir = self.repo_root / "build"
-        self.install_dir = self.repo_root / "install"
         self.chromium_dir = self.repo_root / "chromium"
         self.chromium_version = chromium_version
         
@@ -73,9 +71,7 @@ class ChromiumToolchainBuilder:
         """Setup build environment"""
         logging.info("Setting up build environment...")
         
-        # Create directories
-        self.build_dir.mkdir(exist_ok=True)
-        self.install_dir.mkdir(exist_ok=True)
+        # Create ccache directory
         Path(self.ccache_dir).mkdir(parents=True, exist_ok=True)
         
         logging.info(f"Ccache directory: {self.ccache_dir}")
@@ -163,10 +159,6 @@ class ChromiumToolchainBuilder:
                 logging.error("Could not find LLVM revision in DEPS file")
                 sys.exit(1)
         
-        # Save revision to file
-        with open(self.build_dir / "llvm_revision.txt", 'w') as f:
-            f.write(self.llvm_revision)
-
     def verify_chromium_structure(self):
         """Verify Chromium directory structure"""
         logging.info("Verifying Chromium directory structure...")
@@ -237,13 +229,8 @@ class ChromiumToolchainBuilder:
         # Build command
         build_cmd = [
             sys.executable, 'build.py',
-            '--bootstrap',
-            '--disable-asserts',
             '--without-android',
             '--without-fuchsia',
-            '--use-system-cmake',
-            '--host-cc', 'clang',
-            '--host-cxx', 'clang++',
             '--with-ccache'
         ]
         
@@ -263,53 +250,31 @@ class ChromiumToolchainBuilder:
         """Verify the built toolchain"""
         logging.info("Verifying built toolchain...")
         
-        # Check different possible locations
-        bin_dir = self.install_dir / "bin"
-        chromium_bootstrap_dir = self.chromium_dir / "third_party" / "llvm-bootstrap-install"
-        chromium_llvm_dir = self.chromium_dir / "third_party" / "llvm-build" / "Release+Asserts"
+        # Find the LLVM installation directory
+        bootstrap_dir = self.chromium_dir / "third_party" / "llvm-bootstrap-install"
+        llvm_dir = self.chromium_dir / "third_party" / "llvm-build" / "Release+Asserts"
         
-        source_dir = None
+        if bootstrap_dir.exists() and (bootstrap_dir / "bin").exists():
+            logging.info("Found bootstrap toolchain installation")
+            bin_dir = bootstrap_dir / "bin"
+            self.toolchain_dir = bootstrap_dir
+        elif llvm_dir.exists() and (llvm_dir / "bin").exists():
+            logging.info("Found LLVM build installation")
+            bin_dir = llvm_dir / "bin"
+            self.toolchain_dir = llvm_dir
+        else:
+            logging.error("No LLVM installation found")
+            sys.exit(1)
         
-        if not bin_dir.exists():
-            if chromium_bootstrap_dir.exists() and (chromium_bootstrap_dir / "bin").exists():
-                logging.info("Using bootstrap toolchain installation from chromium directory...")
-                source_dir = chromium_bootstrap_dir
-            elif chromium_llvm_dir.exists() and (chromium_llvm_dir / "bin").exists():
-                logging.info("Using LLVM build from chromium directory...")
-                source_dir = chromium_llvm_dir
-            else:
-                logging.error("No LLVM installation found")
-                sys.exit(1)
-        
-        if source_dir:
-            logging.info("Copying installation to final location...")
-            self.install_dir.mkdir(exist_ok=True)
-            
-            # Copy all contents
-            for item in source_dir.iterdir():
-                if item.is_dir():
-                    shutil.copytree(item, self.install_dir / item.name, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(item, self.install_dir / item.name)
-            
-            bin_dir = self.install_dir / "bin"
-        
-        # Verify executables
+        # Verify executables exist
         clang_bin = bin_dir / "clang"
         clangxx_bin = bin_dir / "clang++"
         lld_bin = bin_dir / "lld"
         
-        if not clang_bin.exists() or not clang_bin.is_file():
-            logging.error("clang executable not found")
-            sys.exit(1)
-        
-        if not clangxx_bin.exists() or not clangxx_bin.is_file():
-            logging.error("clang++ executable not found")
-            sys.exit(1)
-        
-        if not lld_bin.exists() or not lld_bin.is_file():
-            logging.error("lld executable not found")
-            sys.exit(1)
+        for name, path in [("clang", clang_bin), ("clang++", clangxx_bin), ("lld", lld_bin)]:
+            if not path.exists() or not path.is_file():
+                logging.error(f"{name} executable not found at {path}")
+                sys.exit(1)
         
         # Test executables
         logging.info("Testing toolchain functionality...")
@@ -350,11 +315,11 @@ class ChromiumToolchainBuilder:
         """Print build summary"""
         logging.info("Build Summary:")
         print(f"  LLVM Revision: {self.llvm_revision}")
-        print(f"  Install Directory: {self.install_dir}")
+        print(f"  Toolchain Directory: {self.toolchain_dir}")
         
         # Calculate installed size
         try:
-            result = run_command(['du', '-sh', str(self.install_dir)], capture_output=True)
+            result = run_command(['du', '-sh', str(self.toolchain_dir)], capture_output=True)
             size = result.stdout.split()[0]
             print(f"  Installed Size: {size}")
         except:
@@ -368,7 +333,7 @@ class ChromiumToolchainBuilder:
         print(f"  Build Time: {hours:02d}:{minutes:02d}:{seconds:02d}")
         
         logging.info("Available executables:")
-        bin_dir = self.install_dir / "bin"
+        bin_dir = self.toolchain_dir / "bin"
         if bin_dir.exists():
             executables = sorted([f.name for f in bin_dir.iterdir() if f.is_file() and os.access(f, os.X_OK)])
             for exe in executables:
