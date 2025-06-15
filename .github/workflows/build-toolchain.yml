@@ -106,9 +106,6 @@ jobs:
       run: |
         echo "Ccache stats after build:"
         ccache --show-stats
-        echo ""
-        echo "Ccache efficiency:"
-        ccache --show-stats | grep -E "(cache hit|cache miss|hit rate)"
     
     # - name: Package toolchain
     #   run: |
