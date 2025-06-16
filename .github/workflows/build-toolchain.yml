@@ -107,17 +107,17 @@ jobs:
         echo "Ccache stats after build:"
         ccache --show-stats
     
-    # - name: Package toolchain
-    #   run: |
-    #     cd chromium/tools/clang/scripts
-    #     python3 package.py
+    - name: Package toolchain
+      run: |
+        cd chromium/tools/clang/scripts
+        python3 package.py
     
-    # - name: Upload build artifacts
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: chromium-llvm-toolchain-linux-arm64
-    #     path: "*.tar.xz*"
-    #     retention-days: 30
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-llvm-toolchain-linux-arm64
+        path: "*.tar.xz*"
+        retention-days: 30
     
     # - name: Create Release
     #   if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
