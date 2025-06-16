@@ -109,8 +109,7 @@ jobs:
     
     - name: Package toolchain
       run: |
-        cd chromium/tools/clang/scripts
-        python3 package.py
+        python3 scripts/build_toolchain.py --version "$CHROMIUM_VERSION" --package-only
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

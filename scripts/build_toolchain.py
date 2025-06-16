@@ -166,6 +166,47 @@ def build_toolchain(chromium_version="main"):
         sys.exit(1)
 
 
+def package_toolchain(chromium_dir):
+    """Package the built toolchain into a tar.xz archive"""
+    logging.info("Packaging built toolchain...")
+    
+    # Import update.py to get package version info
+    sys.path.insert(0, str(chromium_dir / "tools/clang/scripts"))
+    try:
+        from update import PACKAGE_VERSION
+        package_name = f"clang-{PACKAGE_VERSION}"
+    except ImportError:
+        logging.warning("Could not import update.py, using fallback package name")
+        package_name = "chromium-llvm-toolchain-linux-arm64"
+    
+    # Find the built toolchain
+    bootstrap_dir = chromium_dir / "third_party/llvm-bootstrap-install"
+    llvm_dir = chromium_dir / "third_party/llvm-build/Release+Asserts"
+    
+    if bootstrap_dir.exists():
+        source_dir = bootstrap_dir
+    elif llvm_dir.exists():
+        source_dir = llvm_dir
+    else:
+        logging.error("No built toolchain found to package")
+        sys.exit(1)
+    
+    logging.info(f"Packaging toolchain from: {source_dir}")
+    
+    # Create tar.xz archive
+    import tarfile
+    import lzma
+    
+    archive_path = f"{package_name}.tar.xz"
+    with tarfile.open(archive_path, 'w:xz', preset=9 | lzma.PRESET_EXTREME) as tar:
+        tar.add(source_dir, arcname=package_name, filter=lambda tarinfo: (
+            logging.info(f"Adding {tarinfo.name}") or tarinfo
+        ))
+    
+    logging.info(f"Created package: {archive_path}")
+    return archive_path
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build Chromium LLVM toolchain")
     parser.add_argument(
@@ -178,12 +219,20 @@ def main():
         action="store_true",
         help="Just extract and print the LLVM revision, then exit",
     )
+    parser.add_argument(
+        "--package-only",
+        action="store_true",
+        help="Only package existing toolchain, don't build",
+    )
 
     args = parser.parse_args()
 
     if args.get_llvm_revision:
         _, llvm_revision = get_chromium_and_llvm_info(args.version)
         print(llvm_revision)
+    elif args.package_only:
+        chromium_dir, _ = get_chromium_and_llvm_info(args.version)
+        package_toolchain(chromium_dir)
     else:
         build_toolchain(args.version)
 
