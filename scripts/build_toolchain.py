@@ -175,8 +175,14 @@ def package_toolchain(chromium_dir):
     sys.path.insert(0, str(scripts_dir))
     
     try:
-        # Import package module
+        # Import package and update modules
         import package
+        import update
+        
+        # Create the missing stamp file that package.py expects using update.py's function
+        expected_stamp = update.PACKAGE_VERSION  # We don't need target_os for our use case
+        update.WriteStampFile(expected_stamp, update.STAMP_FILE)
+        logging.info(f"Created stamp file: {update.STAMP_FILE} with version: {expected_stamp}")
         
         # Monkeypatch TeeCmd to skip the build command but allow everything else
         original_tee_cmd = package.TeeCmd
