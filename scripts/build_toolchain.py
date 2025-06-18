@@ -195,9 +195,17 @@ def package_toolchain(chromium_dir):
         # Apply the monkeypatch
         package.TeeCmd = mock_tee_cmd
         
-        # Run package.py's main function
+        # Run package.py's main function with clean arguments
         logging.info("Running package.py main function...")
-        result = package.main()
+        # Save original argv and replace with just the script name
+        original_argv = sys.argv
+        sys.argv = ['package.py']  # package.py expects no arguments by default
+        
+        try:
+            result = package.main()
+        finally:
+            # Restore original argv
+            sys.argv = original_argv
         
         # Restore original function
         package.TeeCmd = original_tee_cmd
